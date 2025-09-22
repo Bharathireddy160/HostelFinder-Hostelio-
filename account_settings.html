@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account Settings - Hostelio</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <style>
+    body {
+      margin: 0; font-family: Arial, sans-serif;
+      background: url('images/bg.jpeg') no-repeat center center fixed;
+      background-size: cover; color: white;
+      display: flex; flex-direction: column; min-height: 100vh;
+    }
+
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 15px 30px; background: rgba(0,0,0,0.8);
+    }
+
+    .logo {
+      width: 70px; height: 70px; border-radius: 50%; object-fit: cover;
+    }
+
+    .title { font-size: 24px; font-weight: bold; color: #ffd700; }
+
+    .nav-links a {
+      color: white; text-decoration: none; margin-left: 20px; font-weight: bold;
+    }
+
+    .nav-links a:hover { color: #ffd700; }
+
+    main {
+      flex: 1; max-width: 600px; margin: 30px auto; padding: 20px;
+      background: rgba(0,0,0,0.6); border-radius: 10px;
+    }
+
+    h1 { color: #ffd700; text-align: center; margin-bottom: 25px; }
+
+    label { display: block; margin-top: 15px; font-size: 16px; }
+    input {
+      width: 100%; padding: 10px; margin-top: 8px; border: none;
+      border-radius: 6px;
+    }
+
+    button {
+      margin-top: 20px; width: 100%;
+      background: #ffd700; color: black;
+      padding: 12px; border: none; border-radius: 8px;
+      font-size: 17px; font-weight: bold;
+      cursor: pointer; transition: background 0.3s, transform 0.2s;
+    }
+
+    button:hover { background: #e6c200; transform: scale(1.05); }
+
+    .back-btn {
+      display: block; margin-top: 15px; text-align: center;
+      text-decoration: none; background: #555;
+      color: white; padding: 10px; border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex; align-items:center; gap:10px;">
+    <img src="images/ic.png" alt="Logo" class="logo">
+  </div><div class="title">Hostelio</div>
+  <div class="nav-links">
+    <a href="user_home.html">Home</a>
+    <a href="user_dashboard.html">Dashboard</a>
+    <a href="user_profile.html">Profile</a>
+  </div>
+</header>
+
+<main>
+  <h1>Account Settings</h1>
+
+  <form id="settings-form">
+    <label>Full Name:</label>
+    <input type="text" id="name" placeholder="Enter your name">
+
+    <label>Email:</label>
+    <input type="email" id="email" placeholder="Enter your email">
+
+    <label>Profile Photo URL:</label>
+    <input type="text" id="photo" placeholder="Enter photo URL">
+
+    <label>Password:</label>
+    <input type="password" id="password" placeholder="Enter new password">
+
+    <button type="submit">Save Changes</button>
+  </form>
+
+  <a href="user_dashboard.html" class="back-btn">⬅ Back to Dashboard</a>
+</main>
+
+<footer style="text-align:center; padding:10px; background:rgba(0,0,0,0.7);">
+  &copy; 2025 Hostelio. All rights reserved.
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+  // ✅ Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLn45hIR-S75BEPypx1BFgOV8vA5MaqU0",
+    authDomain: "hostelio-89130.firebaseapp.com",
+    projectId: "hostelio-89130",
+    storageBucket: "hostelio-89130.appspot.com",
+    messagingSenderId: "530522106867",
+    appId: "1:530522106867:web:227d355ea3fcc63317c086",
+    measurementId: "G-CYM1EHN5G5"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ✅ Pre-fill form with Firestore user data
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      try {
+        const doc = await db.collection("users").doc(user.uid).get();
+        if (doc.exists) {
+          const data = doc.data();
+          document.getElementById("name").value = data.name || "";
+          document.getElementById("email").value = data.email || user.email;
+          document.getElementById("photo").value = data.photo || "";
+        } else {
+          console.log("⚠️ No Firestore user data, using Auth only.");
+          document.getElementById("name").value = user.displayName || "";
+          document.getElementById("email").value = user.email || "";
+          document.getElementById("photo").value = user.photoURL || "";
+        }
+      } catch (err) {
+        console.error("Error loading user data:", err);
+      }
+    }
+  });
+
+  // ✅ Handle Save Changes
+  document.getElementById("settings-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    let name = document.getElementById("name").value;
+    let email = document.getElementById("email").value;
+    let photo = document.getElementById("photo").value;
+    let password = document.getElementById("password").value;
+
+    const user = auth.currentUser;
+
+    if (user) {
+      try {
+        // Update Firebase Auth profile
+        await user.updateProfile({ displayName: name, photoURL: photo });
+
+        if (email && email !== user.email) {
+          await user.updateEmail(email);
+        }
+
+        if (password) {
+          await user.updatePassword(password);
+        }
+
+        // ✅ Update Firestore
+        await db.collection("users").doc(user.uid).set({
+          name: name,
+          email: email,
+          photo: photo,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+
+        alert("✅ Account settings updated successfully!");
+      } catch (err) {
+        alert("⚠️ Error: " + err.message);
+      }
+    }
+  });
+</script>

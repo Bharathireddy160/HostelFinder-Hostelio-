@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>View Hostels - Hostelio</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url('images/bg.jpeg') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: rgba(0,0,0,0.8);
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .title { font-size: 24px; font-weight: bold; color: #ffd700; }
+    .nav-links a { color: white; margin-left: 20px; text-decoration: none; }
+    .nav-links a:hover { color: #ffd700; }
+    main { flex: 1; padding: 20px; }
+    h1 { text-align: center; color: #ffd700; margin-bottom: 20px; }
+    .hostel-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .hostel-card {
+      background: rgba(0,0,0,0.6);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+      transition: transform 0.2s;
+    }
+    .hostel-card:hover { transform: scale(1.03); }
+    .hostel-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      background: #333;
+    }
+    .hostel-info { padding: 15px; }
+    .hostel-info h2 { margin: 0 0 10px; color: #ffd700; font-size: 20px; }
+    .hostel-info p { margin: 5px 0; }
+    .price { font-weight: bold; color: #00ff99; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="title">Hostelio - Admin</div>
+  <div class="nav-links">
+    <a href="admin_dashboard.html">Dashboard</a>
+    <a href="add_hostel.html">Add Hostel</a>
+  </div>
+</header>
+
+<main>
+  <h1>View Hostels</h1>
+  <div class="hostel-list" id="hostelList">Loading...</div>
+</main>
+
+<!-- ✅ Firebase SDK v8 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+<script>
+  // ✅ Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCLn45hIR-S75BEPypx1BFgOV8vA5MaqU0",
+    authDomain: "hostelio-89130.firebaseapp.com",
+    projectId: "hostelio-89130",
+    storageBucket: "hostelio-89130.appspot.com",
+    messagingSenderId: "530522106867",
+    appId: "1:530522106867:web:227d355ea3fcc63317c086",
+    measurementId: "G-CYM1EHN5G5"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  const hostelList = document.getElementById("hostelList");
+
+  async function loadHostels() {
+    try {
+      const snapshot = await db.collection("hostels").orderBy("createdAt", "desc").get();
+      if (snapshot.empty) {
+        hostelList.innerHTML = "<p>No hostels found.</p>";
+        return;
+      }
+
+      hostelList.innerHTML = "";
+      snapshot.forEach(doc => {
+        const hostel = doc.data();
+        console.log("🔥 Hostel data:", hostel);
+
+        // ✅ Ensure images array exists
+        let imageUrl = "images/default_hostel.jpg";
+        if (Array.isArray(hostel.images) && hostel.images.length > 0) {
+          imageUrl = hostel.images[0]; // Use first uploaded image
+        }
+
+        console.log("🖼 Image used:", imageUrl);
+
+        const card = `
+          <div class="hostel-card">
+            <img src="${imageUrl}" alt="${hostel.name}"
+                 onerror="this.src='images/default_hostel.jpg'">
+            <div class="hostel-info">
+              <h2>${hostel.name}</h2>
+              <p><strong>Location:</strong> ${hostel.location}</p>
+              <p>${hostel.description}</p>
+              <p class="price">₹${hostel.price} / month</p>
+              <p><strong>Rooms:</strong> ${hostel.rooms}</p>
+            </div>
+          </div>
+        `;
+        hostelList.innerHTML += card;
+      });
+    } catch (err) {
+      console.error("❌ Error loading hostels:", err);
+      hostelList.innerHTML = "<p>❌ Failed to load hostels.</p>";
+    }
+  }
+
+  loadHostels();
+</script>
+</body>
+</html>
